@@ -1,0 +1,3 @@
+pv $1 | md5sum
+echo "Checking file -- > " 
+cat MD5_checksums.txt | grep $1
