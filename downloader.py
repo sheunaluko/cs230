@@ -69,7 +69,7 @@ links = [
 
 md5_link = 'https://nihcc.box.com/shared/static/q0f8gy79q2spw96hs6o4jjjfsrg17t55.txt'
 
-to_download = set([1, 2])
+to_download = set(range(60))
 
 urllib.urlretrieve(md5_link, "MD5_checksums.txt")  # download the MD5 checksum file
 

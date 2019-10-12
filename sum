@@ -1,3 +1,23 @@
-pv $1 | md5sum
-echo "Checking file -- > " 
-cat MD5_checksums.txt | grep $1
+echo "Checking: $1"
+
+verbose=${2-1}
+
+
+if [ $verbose == 0 ] ; then
+    r=`md5sum $1 | awk '{print $1}'` #calc the sum
+else
+    r=`pv $1 | md5sum | awk '{print $1}'` #calc the sum
+fi
+
+
+v=`cat MD5_checksums.txt | grep $1 | awk '{print $1}'` #get the real val
+
+if [ $r == $v ]; then
+    echo "md5 match: $r"
+    exit 0
+else
+    echo "ERROR: got $r but expected $v"
+    exit 1 
+fi
+
+
