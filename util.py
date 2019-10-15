@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import csv 
 
 # prepare the image directories 
-image_dir = "images/Images_png/" 
+image_dir = "images/Images_png/"
 sub_dirs = os.listdir(image_dir) 
 sub_dirs.sort() 
 
@@ -28,7 +28,7 @@ def read_image(fn,window=True) :
     im =  (im.astype(np.int32)-32768).astype(np.int16) 
     
     if window : 
-        folder = fn.split('/')[-2]        
+        folder = fn.split('/')[-2]
         win = [float(x) for x in dl_info[folder]['DICOM_windows'].split(",")]
         #win = [-1024,3071] 
         #win = [-1350,150]
