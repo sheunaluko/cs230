@@ -14,16 +14,15 @@ import platform
 _os = platform.system() 
 if _os == "Linux"  : 
     fdelim = "/"
-else : 
+elif _os == "Darwin" : 
+    fdelim = "/"
+elif _os == "Windows" :     
     fdelim  = "\\" 
-
+else : 
+    print("unrecognized os!") 
 
 # prepare the image directories 
-<<<<<<< HEAD
 image_dir = "images" + fdelim + "Images_png" + fdelim 
-=======
-image_dir = "images/Images_png/"
->>>>>>> 7302aee401fa7364298240b988ade8a0f761ebeb
 sub_dirs = os.listdir(image_dir) 
 sub_dirs.sort() 
 
@@ -43,7 +42,6 @@ def read_image(fn,with_win=False,bb=True,verbose=True) :
     im = cv2.imread(fn,-1) 
     im =  (im.astype(np.int32)-32768).astype(np.int16) 
     
-<<<<<<< HEAD
     # only look up the window if with_win is False 
     win = with_win or [float(x) for x in dl_info[fn]['DICOM_windows'].split(",")]
     if verbose : 
@@ -88,24 +86,9 @@ def read_image_and_neighbors(fn,verbose=True) :
     slices[:,:,2] = rim 
     
     return (slices, np.array(bb,ndmin=2)) 
-    
-    
 
-def show_image(im,bb=False) :
-    plt.gca().cla()    
-=======
-    if window : 
-        folder = fn.split('/')[-2]
-        win = [float(x) for x in dl_info[folder]['DICOM_windows'].split(",")]
-        #win = [-1024,3071] 
-        #win = [-1350,150]
-        print("For fn: {}, using folder: {}, with window: [{},{}]".format(fn,folder,win[0],win[1]))
-        im = windowing(im,win) 
-              
-    return im 
 
-def show_image(im) : 
->>>>>>> 7302aee401fa7364298240b988ade8a0f761ebeb
+def show_image(im,bb=False) : 
     plt.imshow(im,cmap='gray')
     plt.ion()
     plt.show() 
@@ -122,8 +105,6 @@ def show_image(im) :
     plt.draw()
     plt.pause(0.001) # non blocking 
         
-
-
 def disp(fn,bb=False) : 
     im, bb, win = read_image(fn)  # read the image and the bounding box 
     if bb :
