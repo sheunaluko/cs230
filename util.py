@@ -9,6 +9,15 @@ from matplotlib.patches import Rectangle
 import math
 
 
+
+
+# TO GET DATA  -- RUN THIS! 
+# xs,ys = get_dataset() 
+
+# to plot the data 
+# plot_data(xs,ys,num)  where num is  the row you want to plot 
+
+
 # manage windows/linux stuff
 import platform 
 _os = platform.system() 
@@ -89,6 +98,7 @@ def read_image_and_neighbors(fn,verbose=True) :
 
 
 def show_image(im,bb=False) : 
+    plt.gca().cla()
     plt.imshow(im,cmap='gray')
     plt.ion()
     plt.show() 
@@ -253,18 +263,17 @@ def build_dataset(lesions,name) :
 
     
 
-# for extracting bounding box: the values given are just the indece
-# manually review liver lesions 
-# DRAW the bounding box on the liver lesions and verify with KEY_SLICES examples
-# bottom left pixel x,y and top right pixel x,y 
-
-
-# first pass: grab image on either side and skip interpolation 
-# later -> figure out interpolation 
-
-
-# write documentaiton for how to load data 
-
+def get_dataset() : 
+    # FOR LOADING XS and YS
+    fbase = "datasets" + fdelim + "liver_train_part_1_"
+    xs_fn = fbase + "xs.npy"
+    ys_fn = fbase + "ys.npy"    
+    xs = np.load(xs_fn)
+    ys = np.load(ys_fn)
+    return (xs, ys ) 
+    
+def plot_data(xs,ys,num) : 
+    show_image(xs[num,:,:,1] , bb=ys[num,:,:].flatten() )
 
 def windowing2(im,win): 
     im = im.astype(float)
