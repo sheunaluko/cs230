@@ -94,7 +94,7 @@ def show_image(im,bb=False) :
     plt.show() 
     
     # if bounding box will also draw the bb 
-    if bb : 
+    if bb.any() : 
         # need to convert to appropriate shapes 
         pt = (bb[0], bb[1])
         w  = bb[2] - bb[0]
