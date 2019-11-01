@@ -1,0 +1,5 @@
+For docker modifications, had to:
+1) install opencv-python
+2) RUN apt-get install -y libsm6 libxext6 libxrender-dev  (has a lib needed by cv module)
+
+
