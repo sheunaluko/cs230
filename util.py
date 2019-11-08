@@ -195,7 +195,10 @@ liver_lesion_idx = [ json_labels['train_lesion_idxs'][i] for i in liver_lesion_t
 liver_lesions = select_lesion_idxs(liver_lesion_idx) 
 coarse_types = Counter([x['Coarse_lesion_type'] for x in liver_lesions]) 
 
-# -- 
+# --
+
+def get_folders_for_lesions_set(ls) :
+    return [ "/".join(x['File_name'].split("/")[0:3]) for x in ls ] 
 
 def generate_term_specific_set(train_val_test, term) : 
     labs       = search_for_term(term, json_labels['{}_relevant_labels'.format(train_val_test)])
@@ -289,6 +292,20 @@ def windowing(im, win):
     im1[im1 < 0] = 0
     im1 *= 255
     return im1    
+
+def check_for_file(fname)  : 
+    import os.path
+    return os.path.isfile(fname) 
+
+
+def append_file(fname, strang) : 
+    if not check_for_file(fname) : 
+        mode = 'w' 
+    else : 
+        mode = 'a+' 
+
+    with open(fname, mode) as outfile : 
+        outfile.write(strang)
 
 
     
