@@ -1,0 +1,1 @@
+scp -i ~/.cs230_key.pem -p $1 ubuntu@$2:~/cs230/images/Images_png

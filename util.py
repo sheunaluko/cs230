@@ -198,7 +198,20 @@ coarse_types = Counter([x['Coarse_lesion_type'] for x in liver_lesions])
 # --
 
 def get_folders_for_lesions_set(ls) :
-    return [ "/".join(x['File_name'].split("/")[0:3]) for x in ls ] 
+    return [ "/".join(x['File_name'].split("/")[0:3]) for x in ls ]
+
+def fname_with_neighbors(fname) :
+    (ln, rn) = gen_neighbor_names(fname)
+    return [ln, fname, rn ]
+
+def get_fnames_and_neighbors_for_lesions_set(ls) :
+    res =  [ fname_with_neighbors(x['File_name'])  for x in ls  ]
+    return [item for sublist in res for item in sublist]
+
+def write_list_to_file(fname,l) :
+    for i in l :
+        append_file(fname,i + "\n")
+        
 
 def generate_term_specific_set(train_val_test, term) : 
     labs       = search_for_term(term, json_labels['{}_relevant_labels'.format(train_val_test)])
