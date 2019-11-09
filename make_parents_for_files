@@ -1,0 +1,1 @@
+for f in `cat $1`; do mkdir -p `dirname $f`; done

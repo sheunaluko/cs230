@@ -1,0 +1,8 @@
+for i in `cat $1`;
+do
+  echo "Transfering: $i" 
+  fname="$2/$i"
+  mkdir -p `dirname $fname`   
+  cp $i $fname 
+done
+

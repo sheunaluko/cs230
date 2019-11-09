@@ -8,9 +8,6 @@ from collections import Counter
 from matplotlib.patches import Rectangle
 import math
 
-
-
-
 # TO GET DATA  -- RUN THIS! 
 # xs,ys = get_dataset() 
 
@@ -206,7 +203,7 @@ def fname_with_neighbors(fname) :
 
 def get_fnames_and_neighbors_for_lesions_set(ls) :
     res =  [ fname_with_neighbors(x['File_name'])  for x in ls  ]
-    return [item for sublist in res for item in sublist]
+    return [item for sublist in res for item in sublist if check_for_file(item) ] 
 
 def write_list_to_file(fname,l) :
     for i in l :

@@ -1,6 +1,6 @@
 for i in `cat $1`;
 do
   echo "Transfering: $i" 
-  ./transfer_sub_folders $i $2 ;
+  ./transfer_file $i $2 ;
 done
 

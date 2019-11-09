@@ -1,5 +1,0 @@
-for i in `cat $1`;
-do
-  /home/oluwa/notebooks/cs230/transfer_sub_folders $i $2 ;
-done
-
