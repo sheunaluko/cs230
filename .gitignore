@@ -1,4 +1,5 @@
 .env/*
+images
 images/*
 datasets/*
 __pycache__/*
