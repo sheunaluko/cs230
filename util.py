@@ -8,11 +8,42 @@ from collections import Counter
 from matplotlib.patches import Rectangle
 import math
 
-# TO GET DATA  -- RUN THIS! 
-# xs,ys = get_dataset() 
+# DOCUMENTATION 
 
-# to plot the data 
-# plot_data(xs,ys,num)  where num is  the row you want to plot 
+
+############ CLOUD USAGE  (or local if you want to load a fraction of the dataset (see f param below) )
+
+# LOAD DATASET
+
+# !! TLDR; RUN THIS ! --->  x_train,y_train,x_val,y_val,x_test,y_test = data_load(f=1)
+
+    # f param below is the fraction of the dataset you want to load
+    # for example, pass in f=0.1 to load only 10% of the train,val,and test sets
+    # this is useful if you want to test locally and load only a subset of data to fit in RAM
+    # also note that the png files are COMPRESSED, and thus the RAM memory footprint of the png files
+    # is approximately 2 to 7 times larger (uncompressed) 
+    # see the data_load() implementation directly below for more information
+    # note: the output will say "Removed x lesions.." this is because the neighboring slice was missing for those slices 
+
+def data_load(f=1)  : 
+    liver_data = load_liver_data(f)
+    # the above is defined below and returns a dict with keys train, val, test , each of which has value that is a tuple of [ X,Y ]
+    # so we can destructure this like so:
+    from operator import itemgetter
+    [x_train,y_train] , [x_val, y_val] , [x_test,y_test] = itemgetter("train","val","test")(liver_data)
+    # and then we can return all these elements in one big tuple
+    return (x_train,y_train,x_val,y_val,x_test,y_test)
+
+
+
+# END LOAD DATASET
+
+############ END CLOUD USAGE 
+
+
+# END DOCUMENTATION 
+
+
 
 
 # manage windows/linux stuff
@@ -40,7 +71,25 @@ for d in sub_dirs :
     sub_files_fp = [ os.path.join(image_dir,d,x) for x in sub_files ] 
     files.append( [ d , sub_files_fp ] ) 
 
-# files structure should be ready to go :) 
+# helper functions
+
+def check_for_file(fname)  : 
+    import os.path
+    return os.path.isfile(fname) 
+
+
+def append_file(fname, strang) : 
+    if not check_for_file(fname) : 
+        mode = 'w' 
+    else : 
+        mode = 'a+' 
+
+    with open(fname, mode) as outfile : 
+        outfile.write(strang)
+
+# files structure should be ready to go :)
+
+
 
 
 # given a file can we produce a numpy array 
@@ -91,7 +140,7 @@ def read_image_and_neighbors(fn,verbose=True) :
     slices[:,:,1] = mim 
     slices[:,:,2] = rim 
     
-    return (slices, np.array(bb,ndmin=2)) 
+    return (slices, np.array(bb)) 
 
 
 def show_image(im,bb=False) : 
@@ -131,9 +180,6 @@ def disp_loop() :
 def test_show() :
     disp("images/Images_png/000001_03_01/088.png", bb=True)
     
-def show_liver(num) :
-    disp(liver_lesions[num]['File_name'],bb=True)
-    
 def read_json_labels() :             
     with open('text_mined_labels_171_and_split.json') as json_file: 
         data = json.load(json_file)
@@ -143,7 +189,6 @@ json_labels = read_json_labels()
 
 def get_index_of_term(t) : 
     return json_labels['term_list'].index(t)
-        
 
 def search_for_term(term, to_search) :   # term is actually an index here  
     matches = [] 
@@ -184,16 +229,6 @@ def select_lesion_idxs(s) :
     return [ dl_info_vector[x] for x in s ] 
 
 
-# -- liver dev (8 is liver) 
-liver_slices = search_for_term(8, json_labels['train_relevant_labels'])
-liver_lesion_tmp_idx = [ x[0] for x in liver_slices ] 
-liver_lesion_idx = [ json_labels['train_lesion_idxs'][i] for i in liver_lesion_tmp_idx ] 
-
-liver_lesions = select_lesion_idxs(liver_lesion_idx) 
-coarse_types = Counter([x['Coarse_lesion_type'] for x in liver_lesions]) 
-
-# --
-
 def get_folders_for_lesions_set(ls) :
     return [ "/".join(x['File_name'].split("/")[0:3]) for x in ls ]
 
@@ -210,17 +245,76 @@ def write_list_to_file(fname,l) :
         append_file(fname,i + "\n")
         
 
-def generate_term_specific_set(train_val_test, term) : 
+def generate_term_specific_set(train_val_test, term,v=True) : 
     labs       = search_for_term(term, json_labels['{}_relevant_labels'.format(train_val_test)])
     labs_idx   = [ x[0] for x in labs ]
     lesion_idx = [ json_labels['{}_lesion_idxs'.format(train_val_test)][i] for i in labs_idx  ] 
     lesions    = select_lesion_idxs(lesion_idx) 
-    coarse_types = Counter([x['Coarse_lesion_type'] for x in lesions]) 
-    return { "lesions" : lesions , 
+    coarse_types = Counter([x['Coarse_lesion_type'] for x in lesions])
+
+    def filt(l) :
+        ln,rn = gen_neighbor_names(l['File_name'])
+        return (check_for_file(ln) and check_for_file(rn) )
+    
+    final_lesions = list(filter( filt , lesions))
+
+    if v : 
+        print("Removed {} lesion(s) of {}".format(len(lesions) - len(final_lesions) , len(lesions)))
+
+    return { "lesions" : final_lesions , 
              "coarse_types" : coarse_types , 
              "lesion_idx"  : lesion_idx , 
              "labs_idx" : labs_idx , 
              "labs" : labs } 
+
+liver_train_data = generate_term_specific_set("train",8,v=False)
+liver_train      = liver_train_data["lesions"] 
+
+def load_data_to_memory(lesions,msg=None) : 
+    num_lesions  = len(lesions) 
+    xs = np.zeros( (num_lesions, 512,512,3 ) ) 
+    ys = np.zeros( (num_lesions, 4 ) ) 
+    
+    if msg :
+        print(msg)
+    
+    for i,v in enumerate(lesions) :
+
+        if (i % 100 == 0 and i != 0 ) : 
+            print("On index: " + str(i))
+        
+        # get the filename of the lesion 
+        fn = lesions[i]['File_name']
+        
+        # get the data 
+        slices,bounding_box = read_image_and_neighbors(fn,verbose=False) 
+        
+        # append the data
+        xs[i,:,:,:] = slices 
+        ys[i,:]   = bounding_box/512
+
+    # now we return the xs and ys 
+    return (xs,ys) 
+
+def load_all_data_for_term(t,f=1) :
+    sets = ["train" , "val" , "test" ]
+    
+    print("\nLoading data for term index: " + str(t) )
+    print("Fraction of data that will be loaded={}\n".format(f)) 
+    data = {} 
+    for s in sets :
+        print("Loading {} set".format(s))        
+        term_dataset_with_metadata = generate_term_specific_set(s,t)
+        max_index = int(len(term_dataset_with_metadata["lesions"])*f)
+        data[s] = load_data_to_memory(term_dataset_with_metadata["lesions"][0:max_index])
+        print("Done\n")
+        
+    return  data 
+
+
+def load_liver_data(f=1) :
+    return load_all_data_for_term(8,f) #8 is the term ID which corresponds to liver lesion 
+    
 
 
 def build_partitioned_dataset(lesions,name,num_parts) : 
@@ -241,6 +335,8 @@ def build_partitioned_dataset(lesions,name,num_parts) :
         build_dataset(part,name+"_part_"  + part_number)
     
     #done 
+
+    
     
 
 def build_dataset(lesions,name) : 
@@ -303,19 +399,6 @@ def windowing(im, win):
     im1 *= 255
     return im1    
 
-def check_for_file(fname)  : 
-    import os.path
-    return os.path.isfile(fname) 
-
-
-def append_file(fname, strang) : 
-    if not check_for_file(fname) : 
-        mode = 'w' 
-    else : 
-        mode = 'a+' 
-
-    with open(fname, mode) as outfile : 
-        outfile.write(strang)
 
 
     
