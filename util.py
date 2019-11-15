@@ -59,18 +59,36 @@ elif _os == "Windows" :
 else : 
     print("unrecognized os!") 
 
-# prepare the image directories 
-image_dir = "images" + fdelim + "Images_png" + fdelim 
-sub_dirs = os.listdir(image_dir) 
-sub_dirs.sort() 
 
-# replace each sub_dir with [ sub_dir [file_list] ] 
-files = [] 
-for d in sub_dirs : 
-    sub_files = os.listdir(os.path.join(image_dir,d))
-    sub_files.sort() 
-    sub_files_fp = [ os.path.join(image_dir,d,x) for x in sub_files ] 
-    files.append( [ d , sub_files_fp ] ) 
+    
+image_dir = "images" + fdelim + "Images_png" + fdelim 
+
+def set_image_dir(d) : 
+    global image_dir
+    global dl_info_vector
+    global dl_info 
+    
+    image_dir = d 
+    dl_info_vector = read_dl_info_vector() 
+    dl_info = read_dl_info() 
+    
+
+def get_files() : 
+    # prepare the image directories 
+    image_dir = "images" + fdelim + "Images_png" + fdelim 
+    sub_dirs = os.listdir(image_dir) 
+    sub_dirs.sort() 
+
+    # replace each sub_dir with [ sub_dir [file_list] ] 
+    files = [] 
+    for d in sub_dirs : 
+        sub_files = os.listdir(os.path.join(image_dir,d))
+        sub_files.sort() 
+        sub_files_fp = [ os.path.join(image_dir,d,x) for x in sub_files ] 
+        files.append( [ d , sub_files_fp ] ) 
+
+    return files 
+
 
 # helper functions
 
@@ -87,9 +105,6 @@ def append_file(fname, strang) :
 
     with open(fname, mode) as outfile : 
         outfile.write(strang)
-
-# files structure should be ready to go :)
-
 
 
 
@@ -118,8 +133,8 @@ def gen_neighbor_names(fn) :
     slice_tok = tok[-1].split(".")
     left_num  = "{:03d}".format(int(slice_tok[0]) - 1)
     right_num = "{:03d}".format(int(slice_tok[0]) + 1)
-    left_fn   = fdelim.join(tok[0:3]) + fdelim + left_num + ".png" 
-    right_fn   = fdelim.join(tok[0:3]) + fdelim + right_num + ".png" 
+    left_fn   = fdelim.join(tok[0:-1]) + fdelim + left_num + ".png" 
+    right_fn   = fdelim.join(tok[0:-1]) + fdelim + right_num + ".png" 
     return (left_fn, right_fn) 
 
 
@@ -227,6 +242,7 @@ def read_dl_info() :
 dl_info = read_dl_info() 
 
 def select_lesion_idxs(s) : 
+    
     return [ dl_info_vector[x] for x in s ] 
 
 
@@ -255,6 +271,7 @@ def generate_term_specific_set(train_val_test, term,v=True) :
 
     def filt(l) :
         ln,rn = gen_neighbor_names(l['File_name'])
+        #print(ln) 
         return (check_for_file(ln) and check_for_file(rn) )
     
     final_lesions = list(filter( filt , lesions))

@@ -1,1 +1,1 @@
-docker run -u 1000:1000 --gpus device=0,0 -d  -v /home/ubuntu/cs230_shay:/tf/cs230_shay -p 8888:8888 sheunaluko/cs230:v1
+docker run -u 1000:1000 --gpus device=0,0 -d  -v /home/ubuntu/cs230:/tf/cs230 -p 8888:8888 sheunaluko/cs230:v1
