@@ -8,6 +8,7 @@ from collections import Counter
 from matplotlib.patches import Rectangle
 import math
 import tensorflow as tf 
+keras = tf.keras 
 
 # DOCUMENTATION 
 
@@ -157,6 +158,22 @@ def read_image_and_neighbors(fn,verbose=True) :
     slices[:,:,2] = rim 
     
     return (slices, np.array(bb)) 
+
+def nb_imshow(im,bb=False) : 
+  
+    plt.imshow(im[:,:,1],cmap='gray')
+
+    # if bounding box will also draw the bb 
+    if bb.any() : 
+        # unnormalize the bounding box 
+        bb = 512*bb 
+        # need to convert to appropriate shapes 
+        pt = (bb[0], bb[1])
+        w  = bb[2] - bb[0]
+        h  = bb[3] - bb[1]
+        print("Using bb coords: ({},{}),{},{}".format(pt[0],pt[1],w,h))
+        plt.gca().add_patch(Rectangle(pt,w,h,linewidth=1,edgecolor='lime',facecolor='none'))
+
 
 
 def show_image(im,bb=False) : 
@@ -535,7 +552,18 @@ def IoU(y_true, y_pred):
 
     return iou 
 
-    
+
+# load the desired model 
+def load_model(model_name) :
+    print("Loading model: {}".format(model_name))
+    # returns a compiled model
+    from keras.models import load_model
+    model = load_model(model_name)
+
+# save model 
+def save_model(model,name) : 
+    model.save(name)  
+
     
 
 
