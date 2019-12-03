@@ -5,7 +5,15 @@ keras = tf.keras
 import time 
 import util as u
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv2D, Flatten, Activation
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, Activation, Dropout
+
+
+#vgg16
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions 
+
+
 
 # ML helpers 
 
@@ -111,13 +119,7 @@ def IoU(y_true, y_pred):
 
     return iou 
 
-
-# load the desired model 
-def load_model(model_name) :
-    print("Loading model: {}".format(model_name))
-    # returns a compiled model
-    from keras.models import load_model
-    model = load_model(model_name)
+    
 
 # save model 
 def save_model(model,name) : 
@@ -125,9 +127,9 @@ def save_model(model,name) :
     
     
 # train curve 
-def train_curve(h,name) : 
-    train_loss = h.history['loss']
-    test_loss  = h.history['val_loss']
+def train_curve(h,name=False) : 
+    train_loss = h['loss']
+    test_loss  = h['val_loss']
     epoch_count = range(1, len(train_loss) + 1)
 
     plt.plot(epoch_count, train_loss, 'r--')
@@ -136,9 +138,16 @@ def train_curve(h,name) :
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.ylim([0,0.2])
-    plt.show();
-    plt.savefig("models/" + name + ".png")
     
+    # conditionally save 
+    if name : 
+        plt.savefig("models/" + name + ".png")
+        
+    plt.show();
+
+def jupyter_show_png(fname) : 
+    from IPython.display import Image 
+    return Image(filename=fname)
     
 # now build a function for graphing these results over time 
 def benchmark_bar(results,title) : 
@@ -183,6 +192,223 @@ def get_baseline_conv_model_1() :
     
     return model 
 
+def get_baseline_vgg_model_1(dropout=False) : 
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3) )
+    # should (later) try both layers block4_conv3 and block3_conv3
+    vgg_extraction = vgg_model.get_layer('block4_conv3').output # (1, 64, 64, 512)
+    
+    X = Conv2D(32, kernel_size=5)(vgg_extraction)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(vgg_model.input, boxes) 
+    
+    #make sure to free all of the vgg layers 
+    for layer in vgg_model.layers : 
+        layer.trainable = False 
+
+    return model     
+
+
+def get_baseline_vgg_model_3(dropout=False) : 
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3) )
+
+    vgg_extraction = vgg_model.get_layer('block3_conv3').output # ?
+    
+    X = Conv2D(32, kernel_size=5)(vgg_extraction)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(vgg_model.input, boxes) 
+    
+    #make sure to freeze all of the vgg layers 
+    for layer in vgg_model.layers : 
+        layer.trainable = False 
+
+    return model   
+
+
+def get_baseline_vgg_model_2(dropout=False) : 
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3) )
+
+    vgg_extraction = vgg_model.get_layer('block2_conv2').output # ?
+    
+    X = Conv2D(32, kernel_size=5)(vgg_extraction)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(vgg_model.input, boxes) 
+    
+    #make sure to freeze all of the vgg layers 
+    for layer in vgg_model.layers : 
+        layer.trainable = False 
+
+    return model   
+
+
+
+def get_baseline_vgg_model_4tr(dropout=False) : 
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3) )
+
+    vgg_extraction = vgg_model.get_layer('block4_conv3').output # ?
+    
+    X = Conv2D(32, kernel_size=5)(vgg_extraction)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(vgg_model.input, boxes) 
+    
+
+    return model   
+
+def get_vgg_model(layer,dropout=False,trainable=False) :    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3) )
+
+    vgg_extraction = vgg_model.get_layer(layer).output # ?
+    
+    X = Conv2D(32, kernel_size=5)(vgg_extraction)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(vgg_model.input, boxes) 
+    
+    #make sure to freeze all of the vgg layers 
+    if trainable : 
+        print("Vgg backbone will be trainable")
+    else : 
+        print("Vgg backbone will NOT be trainable")
+        for layer in vgg_model.layers : 
+            layer.trainable = False 
+
+    return model   
 
 # results 
 
@@ -195,22 +421,68 @@ def get_results(x,y) :
     
 # define model RUN FUNCTIONS 
 
-def run_model(data_fraction=0.1,batch_size=1,num_epochs=10,multi_gpu=False,data=False) : 
-    
+def run_model(data_fraction=0.1,
+              batch_size=1,
+              num_epochs=10,
+              multi_gpu=False,
+              data=False,
+              learning_rate=0.001,
+              learning_rate_decay = False, 
+              dropout = False , 
+              tensorboard=False,
+              save=False,
+              model_id=None) : 
+
+    callbacks = None 
+    if tensorboard : 
+        print("\nUsing tensorboard\n")
+        import datetime 
+        log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        callbacks = [tensorboard_callback] 
+
     
     # load the data 
     if (data) : 
         # data was provided 
-        print("\n\nUsing provided data") 
+        print("\nUsing provided data\n") 
         x_train,y_train,x_val,y_val,x_test,y_test = data  
     else :     
         x_train,y_train,x_val,y_val,x_test,y_test = u.data_load(f=data_fraction)
     
-    model_name="v0_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size)
-    print("Runing model:: " + model_name) 
-    
-    # get the model 
-    _model = get_baseline_conv_model_1() 
+    if (model_id == 'baseline') : 
+        model_name= "v0_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        # get the model 
+        _model = get_baseline_conv_model_1() 
+        
+    elif (model_id == 'baseline_vgg' ) : 
+        model_name= "vBVGG_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        # get the model 
+        _model = get_baseline_vgg_model_1(dropout=dropout) 
+        
+    elif (model_id == 'baseline_vgg_block3' ) : 
+        model_name= "vBVGG3_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        # get the model 
+        _model = get_baseline_vgg_model_3(dropout=dropout) 
+        
+    elif (model_id == 'baseline_vgg_block2' ) : 
+        model_name= "vBVGG2_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        # get the model 
+        _model = get_baseline_vgg_model_2(dropout=dropout) 
+        
+    #def get_vgg_model(layer,dropout=False,trainable=False) :    
+    elif (model_id == 'baseline_vgg_block4tr' ) :
+        model_name= "vBVGG4tr_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        _model = get_baseline_vgg_model_4tr(dropout=dropout)  
+
+        
+    else :
+        raise Exception("Must specify model id!") 
+            
+    if (learning_rate_decay) : 
+        model_name += "_lrd" 
+    if (dropout) : 
+        model_name = "{}_d{}".format(model_name,dropout) 
     
     if (multi_gpu) : 
         print("Creating multi GPU model")
@@ -218,21 +490,43 @@ def run_model(data_fraction=0.1,batch_size=1,num_epochs=10,multi_gpu=False,data=
     else :  
         model = _model 
             
-    # compile model using accuracy to measure model performance
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999), loss='mean_squared_error',metrics=[IoU])
+    print("\nRuning model:: {}\n".format(model_name))
+   
+            
+    # compile model 
+    if learning_rate_decay :
+        print("\nUsing rate decay\n") 
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate,
+                                                         decay=learning_rate/num_epochs,
+                                                         beta_1=0.9,
+                                                         beta_2=0.999),
+                      loss='mean_squared_error',metrics=[IoU])
+    else : 
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate,
+                                                         beta_1=0.9,
+                                                         beta_2=0.999),
+                      loss='mean_squared_error',metrics=[IoU]) 
     
     # fit model 
-    print("Fitting multi_GPU=[{}] model with bs={},epochs={}".format(str(multi_gpu),str(batch_size),str(num_epochs)) ) 
+    print("\nFitting multi_GPU=[{}] model with bs={},epochs={},lr={}\n".format(str(multi_gpu),str(batch_size),str(num_epochs),learning_rate))
     t_start = time.time() 
-    h = model.fit(x_train, y_train, validation_data=(x_val, y_val), batch_size=batch_size, epochs=num_epochs)
+    
+    h = model.fit(x_train, y_train, validation_data=(x_val, y_val), batch_size=batch_size, epochs=num_epochs,callbacks=callbacks) 
+        
     t_end = time.time()
     time_info = {'t_start' : t_start , 't_end' : t_end , 't_elapsed' : (t_end-t_start) } 
     
-    print("Saving model") 
-    save_model(model,"models/{}.h5".format(model_name) ) 
+    if save : 
+        print("\nSaving model") 
+        save_model(model,"models/{}.h5".format(model_name) ) 
     
-    # return a dictionary 
-    return {'name' : model_name, 'train_info' : h , 'time_info' : time_info } 
+    # return a dictionary with the model instance as well 
+    return {'name' : model_name, 'train_info' : h , 'time_info' : time_info , "model" : model } 
 
+
+def describe_model(model) : 
+    for i, layer in enumerate(model.layers):
+       print("{}, {} , {}".format(i, layer.name,layer.trainable))
+    model.summary()
 
 

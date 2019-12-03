@@ -34,6 +34,8 @@ def data_load(f=1)  :
     from operator import itemgetter
     [x_train,y_train] , [x_val, y_val] , [x_test,y_test] = itemgetter("train","val","test")(liver_data)
     # and then we can return all these elements in one big tuple
+    
+    print("Train Size: {}\nVal Size: {}".format(str(len(x_train)),str(len(x_val))) ) 
     return (x_train,y_train,x_val,y_val,x_test,y_test)
 
 
@@ -174,7 +176,8 @@ def nb_imshow(im,bb=False) :
         print("Using bb coords: ({},{}),{},{}".format(pt[0],pt[1],w,h))
         plt.gca().add_patch(Rectangle(pt,w,h,linewidth=1,edgecolor='lime',facecolor='none'))
 
-
+        
+  
 
 def show_image(im,bb=False) : 
     plt.gca().cla()
