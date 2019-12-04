@@ -280,6 +280,78 @@ def get_baseline_vgg_model_3(dropout=False) :
     return model   
 
 
+def baseline_for_vgg_co_model(dropout=False) : 
+
+    model_in = keras.Input(shape=(512, 512, 515))  # takes in added vgg features 3 image channels + 512 vgg channels
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+        
+    #conv
+    X = Conv2D(32, kernel_size=11)(model_in) 
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+        
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X) 
+    
+    return keras.Model(model_in,boxes)
+
+def vgg_sub_model() : 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3))
+    layers_to_drop = ["block4_pool" , "block5_pool"]                   
+                      
+    model = Sequential()
+    for layer in vgg_model.layers : 
+        if (layer.name not in layers_to_drop ) :  
+            #layer.trainable = True 
+            model.add(layer)
+            
+#    model.add(keras.layers.UpSampling2D(size=(8, 8), data_format="channels_last", interpolation='nearest'))
+                      
+    return model 
+
+
+                      
+def vgg_co_baseline_model(dropout=False) : 
+    model_in = tf.keras.Input(shape=(512,512,3)) 
+    
+    # get the sequential vgg_sub_model 
+    vgg_sub = vgg_sub_model() 
+    # get baseline model 
+    baseline = baseline_for_vgg_co_model(dropout=dropout) 
+    
+    # extract vgg features 
+    vgg_features = vgg_sub(model_in) #(should be 64,64,512) 
+    
+    # upsample these features to match the input shape (times 8) 
+    vgg_upsampled = keras.layers.UpSampling2D(size=(8, 8), data_format="channels_last", interpolation='nearest')(vgg_features)
+    
+    # now concatenate the upsampled vgg feature channels to the original input 
+    new_input = keras.layers.Concatenate(axis=-1)([model_in,vgg_upsampled]) 
+    
+    # and then run the new_input through the baseline model 
+    boxes = baseline(new_input) 
+    
+    # and then return the final model 
+    return keras.Model(model_in, boxes) 
+                      
+
 def get_baseline_vgg_model_2(dropout=False) : 
     
     if (dropout) : 
@@ -469,6 +541,13 @@ def run_model(data_fraction=0.1,
         model_name= "vBVGG2_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
         # get the model 
         _model = get_baseline_vgg_model_2(dropout=dropout) 
+    
+    elif (model_id == 'vgg_co_baseline' ) : 
+        model_name= "vVCB" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        # get the model 
+        _model = vgg_co_baseline_model(dropout=dropout) 
+                
+        
         
     #def get_vgg_model(layer,dropout=False,trainable=False) :    
     elif (model_id == 'baseline_vgg_block4tr' ) :
