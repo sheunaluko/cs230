@@ -326,6 +326,63 @@ def vgg_sub_model() :
                       
     return model 
 
+def vgg_sub_model_2() : 
+    
+    vgg_model = VGG16(weights='imagenet', include_top=False, input_shape = (512,512,3))
+    layers_to_drop = ["block4_pool" , "block5_pool"]       
+    layers_to_freeze  = ["block1_conv1" , "block1_conv2" , "block2_conv1" , "block2_conv2" ] 
+                      
+    model_in = keras.Input(shape=(512,512,3))
+    
+    X = model_in 
+    for layer in vgg_model.layers : 
+        if (layer.name not in layers_to_drop ) :  
+            if (layer.name in layers_to_freeze) : 
+                print("Freezing layer: " + layer.name) 
+                layer.trainable = False
+            X = layer(X) 
+        else : 
+            print("Dropping layer: " + layer.name)
+            
+    return (model_in, X ) 
+
+def get_baseline_vgg_model_no_pool(dropout=False) : 
+    
+    if (dropout) : 
+        print("\nUsing dropout: {}\n".format(dropout)) 
+    
+    (model_in, vgg) = vgg_sub_model_2()  
+    
+    X = Conv2D(32, kernel_size=11)(vgg)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    
+    #pool
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #conv 
+    X = Conv2D(128, kernel_size=5)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(32, kernel_size=5)(X)
+    X = Activation('relu')(X)
+
+    #pool 
+    X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+
+    #flatten and dense 
+    X = Flatten()(X)
+    boxes = Dense(4, activation = None)(X)
+    
+    model = keras.Model(model_in, boxes) 
+    
+    return model   
+
+
 
                       
 def vgg_co_baseline_model(dropout=False) : 
@@ -503,6 +560,7 @@ def run_model(data_fraction=0.1,
               dropout = False , 
               tensorboard=False,
               save=False,
+              describe=False, 
               model_id=None) : 
 
     callbacks = None 
@@ -548,11 +606,14 @@ def run_model(data_fraction=0.1,
         _model = vgg_co_baseline_model(dropout=dropout) 
                 
         
-        
-    #def get_vgg_model(layer,dropout=False,trainable=False) :    
     elif (model_id == 'baseline_vgg_block4tr' ) :
         model_name= "vBVGG4tr_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
         _model = get_baseline_vgg_model_4tr(dropout=dropout)  
+   
+    elif (model_id == 'baseline_vgg_no_pool' ) :
+        model_name= "vBVNP_t" + str(len(x_train)) + "_e" +  str(num_epochs) + "_b" + str(batch_size) + "_lr" + str(learning_rate) 
+        _model = get_baseline_vgg_model_no_pool(dropout=dropout)  
+        
 
         
     else :
@@ -585,6 +646,11 @@ def run_model(data_fraction=0.1,
                                                          beta_1=0.9,
                                                          beta_2=0.999),
                       loss='mean_squared_error',metrics=[IoU]) 
+        
+        
+    # describe the model 
+    if (describe) : 
+        describe_model(model) 
     
     # fit model 
     print("\nFitting multi_GPU=[{}] model with bs={},epochs={},lr={}\n".format(str(multi_gpu),str(batch_size),str(num_epochs),learning_rate))
