@@ -5,4 +5,7 @@
 # For transferring files -- best to use rsync:: 
 rsync -v --include="*" --files-from=liver_to_transfer.txt  --exclude="*" -r ./ pre_transfer
 
-Havent actually tested the above for cloud --but should work. I did a workaround where i first ran build_pre_transfer... which builds a local directory and then run SCP on the root of that dir. The whole issue is around the directory names being lost when just using SCP and the list of files 
+Havent actually tested the above for cloud --but should work. I did a workaround where i first ran build_pre_transfer... which builds a local directory and then run SCP on the root of that dir. The whole issue is around the directory names being lost when just using SCP and the list of files
+
+
+First vgg_co_baseline was TRAINABLE (10 epochs), modified it to FIXED WEIGHTS now (th) 

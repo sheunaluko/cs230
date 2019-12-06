@@ -306,6 +306,9 @@ def baseline_for_vgg_co_model(dropout=False) :
 
     #pool 
     X = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(X)
+    if (dropout) : 
+        X = Dropout(dropout)(X)
+        
     X = Flatten()(X)
     boxes = Dense(4, activation = None)(X) 
     
@@ -319,7 +322,7 @@ def vgg_sub_model() :
     model = Sequential()
     for layer in vgg_model.layers : 
         if (layer.name not in layers_to_drop ) :  
-            #layer.trainable = True 
+            layer.trainable = False
             model.add(layer)
             
 #    model.add(keras.layers.UpSampling2D(size=(8, 8), data_format="channels_last", interpolation='nearest'))
