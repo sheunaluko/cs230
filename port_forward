@@ -1,0 +1,1 @@
+ssh -i ~/.cs230_key.pem -fNL 9000:localhost:8888 ubuntu@$1

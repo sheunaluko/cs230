@@ -1,6 +1,11 @@
 .env/*
+images
 images/*
 datasets/*
 __pycache__/*
-
+.ipynb_checkpoints/*
+core 
+models/*
+logs
+logs/*
 

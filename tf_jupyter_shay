@@ -1,0 +1,1 @@
+docker run -u 1000:1000 --gpus all -d  -v /home/ubuntu/cs230:/tf/cs230 -p 8888:8888 sheunaluko/cs230:v1

@@ -7,15 +7,47 @@ import json
 from collections import Counter 
 from matplotlib.patches import Rectangle
 import math
+import tensorflow as tf 
+keras = tf.keras 
+
+# DOCUMENTATION 
+
+
+############ CLOUD USAGE  (or local if you want to load a fraction of the dataset (see f param below) )
+
+# LOAD DATASET
+
+# !! TLDR; RUN THIS ! --->  x_train,y_train,x_val,y_val,x_test,y_test = data_load(f=1)
+
+    # f param below is the fraction of the dataset you want to load
+    # for example, pass in f=0.1 to load only 10% of the train,val,and test sets
+    # this is useful if you want to test locally and load only a subset of data to fit in RAM
+    # also note that the png files are COMPRESSED, and thus the RAM memory footprint of the png files
+    # is approximately 2 to 7 times larger (uncompressed) 
+    # see the data_load() implementation directly below for more information
+    # note: the output will say "Removed x lesions.." this is because the neighboring slice was missing for those slices 
+
+def data_load(f=1)  : 
+    liver_data = load_liver_data(f)
+    # the above is defined below and returns a dict with keys train, val, test , each of which has value that is a tuple of [ X,Y ]
+    # so we can destructure this like so:
+    from operator import itemgetter
+    [x_train,y_train] , [x_val, y_val] , [x_test,y_test] = itemgetter("train","val","test")(liver_data)
+    # and then we can return all these elements in one big tuple
+    
+    print("Train Size: {}\nVal Size: {}".format(str(len(x_train)),str(len(x_val))) ) 
+    return (x_train,y_train,x_val,y_val,x_test,y_test)
 
 
 
+# END LOAD DATASET
 
-# TO GET DATA  -- RUN THIS! 
-# xs,ys = get_dataset() 
+############ END CLOUD USAGE 
 
-# to plot the data 
-# plot_data(xs,ys,num)  where num is  the row you want to plot 
+
+# END DOCUMENTATION 
+
+
 
 
 # manage windows/linux stuff
@@ -30,20 +62,53 @@ elif _os == "Windows" :
 else : 
     print("unrecognized os!") 
 
-# prepare the image directories 
+
+    
 image_dir = "images" + fdelim + "Images_png" + fdelim 
-sub_dirs = os.listdir(image_dir) 
-sub_dirs.sort() 
 
-# replace each sub_dir with [ sub_dir [file_list] ] 
-files = [] 
-for d in sub_dirs : 
-    sub_files = os.listdir(os.path.join(image_dir,d))
-    sub_files.sort() 
-    sub_files_fp = [ os.path.join(image_dir,d,x) for x in sub_files ] 
-    files.append( [ d , sub_files_fp ] ) 
+def set_image_dir(d) : 
+    global image_dir
+    global dl_info_vector
+    global dl_info 
+    
+    image_dir = d 
+    dl_info_vector = read_dl_info_vector() 
+    dl_info = read_dl_info() 
+    
 
-# files structure should be ready to go :) 
+def get_files() : 
+    # prepare the image directories 
+    image_dir = "images" + fdelim + "Images_png" + fdelim 
+    sub_dirs = os.listdir(image_dir) 
+    sub_dirs.sort() 
+
+    # replace each sub_dir with [ sub_dir [file_list] ] 
+    files = [] 
+    for d in sub_dirs : 
+        sub_files = os.listdir(os.path.join(image_dir,d))
+        sub_files.sort() 
+        sub_files_fp = [ os.path.join(image_dir,d,x) for x in sub_files ] 
+        files.append( [ d , sub_files_fp ] ) 
+
+    return files 
+
+
+# helper functions
+
+def check_for_file(fname)  : 
+    import os.path
+    return os.path.isfile(fname) 
+
+
+def append_file(fname, strang) : 
+    if not check_for_file(fname) : 
+        mode = 'w' 
+    else : 
+        mode = 'a+' 
+
+    with open(fname, mode) as outfile : 
+        outfile.write(strang)
+
 
 
 # given a file can we produce a numpy array 
@@ -71,8 +136,8 @@ def gen_neighbor_names(fn) :
     slice_tok = tok[-1].split(".")
     left_num  = "{:03d}".format(int(slice_tok[0]) - 1)
     right_num = "{:03d}".format(int(slice_tok[0]) + 1)
-    left_fn   = fdelim.join(tok[0:3]) + fdelim + left_num + ".png" 
-    right_fn   = fdelim.join(tok[0:3]) + fdelim + right_num + ".png" 
+    left_fn   = fdelim.join(tok[0:-1]) + fdelim + left_num + ".png" 
+    right_fn   = fdelim.join(tok[0:-1]) + fdelim + right_num + ".png" 
     return (left_fn, right_fn) 
 
 
@@ -94,8 +159,25 @@ def read_image_and_neighbors(fn,verbose=True) :
     slices[:,:,1] = mim 
     slices[:,:,2] = rim 
     
-    return (slices, np.array(bb,ndmin=2)) 
+    return (slices, np.array(bb)) 
 
+def nb_imshow(im,bb=False) : 
+  
+    plt.imshow(im[:,:,1],cmap='gray')
+
+    # if bounding box will also draw the bb 
+    if bb.any() : 
+        # unnormalize the bounding box 
+        bb = 512*bb 
+        # need to convert to appropriate shapes 
+        pt = (bb[0], bb[1])
+        w  = bb[2] - bb[0]
+        h  = bb[3] - bb[1]
+        print("Using bb coords: ({},{}),{},{}".format(pt[0],pt[1],w,h))
+        plt.gca().add_patch(Rectangle(pt,w,h,linewidth=1,edgecolor='lime',facecolor='none'))
+
+        
+  
 
 def show_image(im,bb=False) : 
     plt.gca().cla()
@@ -134,9 +216,6 @@ def disp_loop() :
 def test_show() :
     disp("images/Images_png/000001_03_01/088.png", bb=True)
     
-def show_liver(num) :
-    disp(liver_lesions[num]['File_name'],bb=True)
-    
 def read_json_labels() :             
     with open('text_mined_labels_171_and_split.json') as json_file: 
         data = json.load(json_file)
@@ -146,7 +225,6 @@ json_labels = read_json_labels()
 
 def get_index_of_term(t) : 
     return json_labels['term_list'].index(t)
-        
 
 def search_for_term(term, to_search) :   # term is actually an index here  
     matches = [] 
@@ -184,30 +262,97 @@ def read_dl_info() :
 dl_info = read_dl_info() 
 
 def select_lesion_idxs(s) : 
+    
     return [ dl_info_vector[x] for x in s ] 
 
 
-# -- liver dev (8 is liver) 
-liver_slices = search_for_term(8, json_labels['train_relevant_labels'])
-liver_lesion_tmp_idx = [ x[0] for x in liver_slices ] 
-liver_lesion_idx = [ json_labels['train_lesion_idxs'][i] for i in liver_lesion_tmp_idx ] 
+def get_folders_for_lesions_set(ls) :
+    return [ "/".join(x['File_name'].split("/")[0:3]) for x in ls ]
 
-liver_lesions = select_lesion_idxs(liver_lesion_idx) 
-coarse_types = Counter([x['Coarse_lesion_type'] for x in liver_lesions]) 
+def fname_with_neighbors(fname) :
+    (ln, rn) = gen_neighbor_names(fname)
+    return [ln, fname, rn ]
 
-# -- 
+def get_fnames_and_neighbors_for_lesions_set(ls) :
+    res =  [ fname_with_neighbors(x['File_name'])  for x in ls  ]
+    return [item for sublist in res for item in sublist if check_for_file(item) ] 
 
-def generate_term_specific_set(train_val_test, term) : 
+def write_list_to_file(fname,l) :
+    for i in l :
+        append_file(fname,i + "\n")
+        
+
+def generate_term_specific_set(train_val_test, term,v=True) : 
     labs       = search_for_term(term, json_labels['{}_relevant_labels'.format(train_val_test)])
     labs_idx   = [ x[0] for x in labs ]
     lesion_idx = [ json_labels['{}_lesion_idxs'.format(train_val_test)][i] for i in labs_idx  ] 
     lesions    = select_lesion_idxs(lesion_idx) 
-    coarse_types = Counter([x['Coarse_lesion_type'] for x in lesions]) 
-    return { "lesions" : lesions , 
+    coarse_types = Counter([x['Coarse_lesion_type'] for x in lesions])
+
+    def filt(l) :
+        ln,rn = gen_neighbor_names(l['File_name'])
+        #print(ln) 
+        return (check_for_file(ln) and check_for_file(rn) )
+    
+    final_lesions = list(filter( filt , lesions))
+
+    if v : 
+        print("Removed {} lesion(s) of {}".format(len(lesions) - len(final_lesions) , len(lesions)))
+
+    return { "lesions" : final_lesions , 
              "coarse_types" : coarse_types , 
              "lesion_idx"  : lesion_idx , 
              "labs_idx" : labs_idx , 
              "labs" : labs } 
+
+liver_train_data = generate_term_specific_set("train",8,v=False)
+liver_train      = liver_train_data["lesions"] 
+
+def load_data_to_memory(lesions,msg=None) : 
+    num_lesions  = len(lesions) 
+    xs = np.zeros( (num_lesions, 512,512,3 ) ) 
+    ys = np.zeros( (num_lesions, 4 ) ) 
+    
+    if msg :
+        print(msg)
+    
+    for i,v in enumerate(lesions) :
+
+        if (i % 100 == 0 and i != 0 ) : 
+            print("On index: " + str(i))
+        
+        # get the filename of the lesion 
+        fn = lesions[i]['File_name']
+        
+        # get the data 
+        slices,bounding_box = read_image_and_neighbors(fn,verbose=False) 
+        
+        # append the data
+        xs[i,:,:,:] = slices 
+        ys[i,:]   = bounding_box/512
+
+    # now we return the xs and ys 
+    return (xs,ys) 
+
+def load_all_data_for_term(t,f=1) :
+    sets = ["train" , "val" , "test" ]
+    
+    print("\nLoading data for term index: " + str(t) )
+    print("Fraction of data that will be loaded={}\n".format(f)) 
+    data = {} 
+    for s in sets :
+        print("Loading {} set".format(s))        
+        term_dataset_with_metadata = generate_term_specific_set(s,t)
+        max_index = int(len(term_dataset_with_metadata["lesions"])*f)
+        data[s] = load_data_to_memory(term_dataset_with_metadata["lesions"][0:max_index])
+        print("Done\n")
+        
+    return  data 
+
+
+def load_liver_data(f=1) :
+    return load_all_data_for_term(8,f) #8 is the term ID which corresponds to liver lesion 
+    
 
 
 def build_partitioned_dataset(lesions,name,num_parts) : 
@@ -228,6 +373,8 @@ def build_partitioned_dataset(lesions,name,num_parts) :
         build_dataset(part,name+"_part_"  + part_number)
     
     #done 
+
+    
     
 
 def build_dataset(lesions,name) : 
@@ -291,9 +438,8 @@ def windowing(im, win):
     return im1    
 
 
-    
 
-print("Loaded util") 
+    
 
 def reload() : 
     import importlib 
@@ -301,8 +447,100 @@ def reload() :
     importlib.reload(sys.modules['util'])
 
 
+ 
+def convert_to_iou_format(y) : 
+    """  
+    Will convert from [x_min, y_min, x_max, y_max] to [x, y, width, height] 
+    """
+    return np.array([ y[0] , y[1] , y[2]-y[0] , y[3]-y[1] ] ) 
+
+
+def calculate_iou(y_true, y_pred):
+    
+    """
+    Input:
+    Keras provides the input as numpy arrays with shape (batch_size, num_columns).
+    
+    Arguments:
+    y_true -- first box, numpy array with format [x, y, width, height, conf_score]
+    y_pred -- second box, numpy array with format [x, y, width, height, conf_score]
+    x any y are the coordinates of the top left corner of each box.
+    
+    Output: IoU of type float32. (This is a ratio. Max is 1. Min is 0.)
+    
+    """
+
+    results = []
+    
+    
+        # set the types so we are sure what type we are using
+#        y_true = convert_to_iou_format(y_true.astype(np.float32))
+       
+ #       y_pred = convert_to_iou_format(y_pred.astype(np.float32))   
+
+
+        # boxTrue
+    x_boxTrue_tleft = y_true[0]  # numpy index selection
+    y_boxTrue_tleft = y_true[1]
+    boxTrue_width = y_true[2]
+    boxTrue_height = y_true[3]
+    area_boxTrue = (boxTrue_width * boxTrue_height)
+
+        # boxPred
+    x_boxPred_tleft = y_pred[0]
+    y_boxPred_tleft = y_pred[1]
+    boxPred_width = y_pred[2]
+    boxPred_height = y_pred[3]
+    area_boxPred = (boxPred_width * boxPred_height)
+
+
+    x_boxTrue_br = x_boxTrue_tleft + boxTrue_width
+    y_boxTrue_br = y_boxTrue_tleft + boxTrue_height # Version 2 revision
+	# calculate the top left and bottom right coordinates for the intersection box, boxInt
+
+    x_boxPred_br = x_boxPred_tleft + boxPred_width
+    y_boxPred_br = y_boxPred_tleft + boxPred_height
+
+
+	# boxInt - top left coords
+    x_boxInt_tleft = np.max([x_boxTrue_tleft,x_boxPred_tleft])
+    y_boxInt_tleft = np.max([y_boxTrue_tleft,y_boxPred_tleft]) # Version 2 revision
+
+	# boxInt - bottom right coords
+    x_boxInt_br = np.min([x_boxTrue_br,x_boxPred_br])
+    y_boxInt_br = np.min([y_boxTrue_br,y_boxPred_br]) 
+
+	# Calculate the area of boxInt, i.e. the area of the intersection 
+	# between boxTrue and boxPred.
+	# The np.max() function forces the intersection area to 0 if the boxes don't overlap.
+	
+	
+	# Version 2 revision
+    area_of_intersection = \
+    np.max([0,(x_boxInt_br - x_boxInt_tleft)]) * np.max([0,(y_boxInt_br - y_boxInt_tleft)])
+
+    iou = area_of_intersection / ((area_boxTrue + area_boxPred) - area_of_intersection)
+
+
+	# This must match the type used in py_func
+    iou = iou.astype(np.float32)
+	
+    
+    # return the mean IoU score for the batch
+    return iou 
+
+ 
+def IoU(y_true, y_pred):
+    
+    # Note: the type float32 is very important. It must be the same type as the output from
+    # the python function above or you too may spend many late night hours 
+    # trying to debug and almost give up.
+    
+    iou = tf.py_func(calculate_iou, [y_true, y_pred], tf.float32)
+
+    return iou 
 
     
     
 
-
+  
