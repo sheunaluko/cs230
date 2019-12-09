@@ -127,17 +127,20 @@ def save_model(model,name) :
     
     
 # train curve 
-def train_curve(h,name=False) : 
+def train_curve(h,name=False,ylim=[0,0.2],legend=['Training Loss', 'Validation Loss'],title=None) : 
     train_loss = h['loss']
     test_loss  = h['val_loss']
     epoch_count = range(1, len(train_loss) + 1)
 
     plt.plot(epoch_count, train_loss, 'r--')
     plt.plot(epoch_count, test_loss, 'b-')
-    plt.legend(['Training Loss', 'Test Loss'])
+    plt.legend(legend)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.ylim([0,0.2])
+    plt.ylim(ylim)
+    
+    if title : 
+        plt.title(title) 
     
     # conditionally save 
     if name : 

@@ -51,7 +51,7 @@ def nb_visualize_pred(im,y,pred) :
     plt.imshow(im[:,:,1],cmap='gray')
     ax = plt.gca()
     draw_bb_on_plot(ax,pred,'red') # plot prediction in red 
-    draw_bb_on_plot(ax,y,'lime')   # plot truth in green 
+    draw_bb_on_plot(ax,y,'blue')   # plot truth in blue 
     
     
 def nb_visualize_preds(ims,ys,preds) : 
