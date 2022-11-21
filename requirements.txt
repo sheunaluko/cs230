@@ -6,6 +6,6 @@ opencv-python==4.1.1.26
 pyparsing==2.4.2
 python-dateutil==2.8.0
 six==1.12.0
-tensorflow==1.15rc2
+tensorflow==2.9.3
 keras==2.3.1
 pillow==6.2.0
